@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "tinaco": {
+      "lectura": {
+
+        ".read": true,
+        
+        ".write": "auth != null || true" 
+      }
+    }
+  }
+}
