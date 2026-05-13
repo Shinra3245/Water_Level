@@ -15,8 +15,11 @@ export const checkWaterLevel = onValueWritten(
 
     const nivel = data.nivel_pct;
 
-    // Regla de Negocio: Si el nivel es mayor al 20%, el sistema está estable
-    if (nivel > 20) return;
+    // Reglas de Negocio: Alertas por nivel bajo (<=20%) o desbordamiento (>=90%)
+    const isBajo = nivel <= 20;
+    const isAlto = nivel >= 90;
+
+    if (!isBajo && !isAlto) return; // Sistema estable
 
     // Leemos el tiempo de la última alerta para evitar hacer SPAM (Cooldown)
     const configRef = admin.database().ref("/tinaco/config/ultima_alerta");
@@ -28,11 +31,12 @@ export const checkWaterLevel = onValueWritten(
     const COOLDOWN_MS = 5 * 60 * 1000;
 
     if (now - ultimaAlerta < COOLDOWN_MS) {
-      logger.info(`Nivel bajo (${nivel}%), pero en cooldown. Esperando...`);
+      logger.info(`Alerta retenida por cooldown. Nivel actual: ${nivel}%`);
       return;
     }
 
-    logger.warn(`🚨 ALERTA CRÍTICA: Nivel de agua al ${nivel.toFixed(1)}%!`);
+    const tipoAlerta = isBajo ? "Nivel de agua BAJO" : "Riesgo de DESBORDAMIENTO";
+    logger.warn(`🚨 ALERTA CRÍTICA: ${tipoAlerta} (${nivel.toFixed(1)}%)!`);
 
     // 1. Actualizamos el timer para reiniciar el Cooldown de 5 minutos
     await configRef.set(now);

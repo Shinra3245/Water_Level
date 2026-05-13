@@ -72,6 +72,7 @@ export default function Dashboard() {
 
   // Variable para determinar si estamos en estado crítico
   const isNivelBajo = lectura ? lectura.nivel_pct <= 20 : false;
+  const isNivelAlto = lectura ? lectura.nivel_pct >= 90 : false;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 p-8 font-sans">
@@ -93,15 +94,26 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Banner de Riesgo de Desbordamiento */}
+        {isNivelAlto && (
+          <div className="bg-amber-50 border border-amber-500 p-4 rounded-xl flex items-center gap-4 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+            <span className="text-4xl">🌊</span>
+            <div>
+              <h3 className="text-amber-600 font-bold text-lg">ALERTA DE DESBORDAMIENTO</h3>
+              <p className="text-amber-800 text-sm">El nivel ha alcanzado el 90% o más. Cierre el suministro de agua.</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Panel Izquierdo: Visualización de Datos Reales de Firebase */}
-          <div className={`bg-white p-6 rounded-xl border shadow-md transition-colors duration-300 ${isNivelBajo ? 'border-red-500' : 'border-slate-200'}`}>
+          <div className={`bg-white p-6 rounded-xl border shadow-md transition-colors duration-300 ${isNivelBajo ? 'border-red-500' : isNivelAlto ? 'border-amber-500' : 'border-slate-200'}`}>
             <h2 className="text-xl font-semibold mb-4 text-slate-800">Datos en Tiempo Real (RTDB)</h2>
             
             {lectura ? (
               <div className="space-y-4">
                 <div className="flex items-end gap-2">
-                  <span className={`text-6xl font-bold transition-colors duration-300 ${isNivelBajo ? 'text-red-500' : 'text-blue-500'}`}>
+                  <span className={`text-6xl font-bold transition-colors duration-300 ${isNivelBajo ? 'text-red-500' : isNivelAlto ? 'text-amber-500' : 'text-blue-500'}`}>
                     {lectura.nivel_pct.toFixed(1)}%
                   </span>
                   <span className="text-slate-500 mb-2">nivel filtrado</span>
@@ -132,7 +144,11 @@ export default function Dashboard() {
               <button onClick={() => modificarNivel(-5)} className="flex-1 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 active:scale-95 transition-all duration-150 py-3 rounded-lg border border-slate-300 shadow-sm">
                 🚰 Abrir Llave (-5%)
               </button>
-              <button onClick={() => modificarNivel(5)} className="flex-1 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 active:scale-95 transition-all duration-150 py-3 rounded-lg border border-slate-300 shadow-sm">
+              <button 
+                onClick={() => modificarNivel(5)} 
+                disabled={isNivelAlto}
+                className={`flex-1 transition-all duration-150 py-3 rounded-lg border shadow-sm ${isNivelAlto ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 active:scale-95 border-slate-300'}`}
+              >
                 🌧️ Llenar (+5%)
               </button>
             </div>
@@ -154,8 +170,8 @@ export default function Dashboard() {
                   <AreaChart data={historial} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorNivel" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={isNivelBajo ? "#ef4444" : "#3b82f6"} stopOpacity={0.9}/>
-                        <stop offset="95%" stopColor={isNivelBajo ? "#fca5a5" : "#93c5fd"} stopOpacity={0.3}/>
+                        <stop offset="5%" stopColor={isNivelBajo ? "#ef4444" : isNivelAlto ? "#f59e0b" : "#3b82f6"} stopOpacity={0.9}/>
+                        <stop offset="95%" stopColor={isNivelBajo ? "#fca5a5" : isNivelAlto ? "#fcd34d" : "#93c5fd"} stopOpacity={0.3}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -167,7 +183,7 @@ export default function Dashboard() {
                     <Area 
                       type="monotone" 
                       dataKey="nivel_pct" 
-                      stroke={isNivelBajo ? "#ef4444" : "#60a5fa"}
+                      stroke={isNivelBajo ? "#ef4444" : isNivelAlto ? "#f59e0b" : "#60a5fa"}
                       strokeWidth={3}
                       fillOpacity={1} 
                       fill="url(#colorNivel)" 
