@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
@@ -11,5 +11,6 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
+// Verifica si la app ya fue inicializada para evitar errores de recarga (HMR) en Next.js
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getDatabase(app);

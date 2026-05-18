@@ -19,22 +19,25 @@ export class VirtualESP32 {
   public generateReading() {
     // 1. Añadir ruido blanco artificial al HC-SR04 (outliers/rebotes)
     const noise = (Math.random() * 10) - 5; // Ruido entre -5% y +5%
-    let rawReading = this.currentLevelPct + noise;
+    const rawReading = this.currentLevelPct + noise;
     
     // 2. Filtrar usando el algoritmo de Kalman
     const filteredLevel = this.kalman.updateEstimate(rawReading);
     
     // 3. Calcular distancia basándonos en el nivel
-    const distanceCm = this.maxDistanceCm * (1 - (filteredLevel / 100));
+    const levelCm = this.maxDistanceCm * (filteredLevel / 100);
+    const distanceCm = this.maxDistanceCm - levelCm;
 
-    // 4. Formatear timestamps para la sincronización E2E
+    // 4. Formatear el payload según el contrato de interfaz (KR 3.2)
     const now = new Date();
     
     return {
-      dist_cm: parseFloat(distanceCm.toFixed(1)),
-      nivel_pct: filteredLevel,
-      ts: now.toISOString(), // Formato ISO 8601 (requerimiento NTP)
-      ts_server: now.getTime()
+      d: parseFloat(distanceCm.toFixed(1)), // distancia en cm
+      n: parseFloat(levelCm.toFixed(1)), // nivel en cm
+      p: parseFloat(filteredLevel.toFixed(1)), // nivel en porcentaje
+      a: 0, // alerta local (0 = no, 1 = si)
+      t: now.toISOString(), // Timestamp del "dispositivo" (NTP)
+      s: { ".sv": "timestamp" }, // Macro de Firebase para timestamp del servidor
     };
   }
 }

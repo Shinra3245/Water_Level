@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { ref, onValue, set } from "firebase/database";
+import { ref, onValue } from "firebase/database";
 import { db } from "../lib/firebase";
 import { VirtualESP32 } from "../VirtualSensor";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface SensorReading {
-  nivel_pct: number;
-  dist_cm: number;
-  ts?: string;
+  p: number; // Nivel en porcentaje
+  d: number; // Distancia en cm
+  n: number; // Nivel en cm
+  a: number; // Alerta
+  t: string; // Timestamp ISO del dispositivo
+  s: number; // Timestamp del servidor (epoch)
 }
 
 export default function Dashboard() {
@@ -57,8 +60,17 @@ export default function Dashboard() {
       interval = setInterval(() => {
         if (simulatorRef.current) {
           const newData = simulatorRef.current.generateReading();
-          // Guardamos el nuevo dato simulado en Firebase
-          set(ref(db, "tinaco/lectura"), newData);
+          // KR 3.5: El simulador ahora llama al endpoint de ingesta,
+          // en lugar de escribir directamente en la base de datos.
+          fetch(process.env.NEXT_PUBLIC_API_ENDPOINT_URL!, {
+            method: "POST", // O PUT, según la implementación final
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newData),
+          })
+          .then(res => res.json())
+          .catch(err => console.error("Error al llamar al endpoint:", err));
         }
       }, 500);
     }
@@ -71,8 +83,8 @@ export default function Dashboard() {
   };
 
   // Variable para determinar si estamos en estado crítico
-  const isNivelBajo = lectura ? lectura.nivel_pct <= 20 : false;
-  const isNivelAlto = lectura ? lectura.nivel_pct >= 90 : false;
+  const isNivelBajo = lectura && lectura.p !== undefined ? lectura.p <= 20 : false;
+  const isNivelAlto = lectura && lectura.p !== undefined ? lectura.p >= 90 : false;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 p-8 font-sans">
@@ -114,11 +126,11 @@ export default function Dashboard() {
               <div className="space-y-4">
                 <div className="flex items-end gap-2">
                   <span className={`text-6xl font-bold transition-colors duration-300 ${isNivelBajo ? 'text-red-500' : isNivelAlto ? 'text-amber-500' : 'text-blue-500'}`}>
-                    {lectura.nivel_pct.toFixed(1)}%
+                    {(lectura.p ?? 0).toFixed(1)}%
                   </span>
                   <span className="text-slate-500 mb-2">nivel filtrado</span>
                 </div>
-                <p className="text-slate-600">Distancia al sensor: {lectura.dist_cm} cm</p>
+                <p className="text-slate-600">Distancia al sensor: {lectura.d ?? '--'} cm</p>
                 <div className="bg-slate-100 p-3 rounded-lg text-xs font-mono text-emerald-700 break-all border border-slate-200">
                   {JSON.stringify(lectura, null, 2)}
                 </div>
@@ -182,7 +194,7 @@ export default function Dashboard() {
                     />
                     <Area 
                       type="monotone" 
-                      dataKey="nivel_pct" 
+                      dataKey="p" 
                       stroke={isNivelBajo ? "#ef4444" : isNivelAlto ? "#f59e0b" : "#60a5fa"}
                       strokeWidth={3}
                       fillOpacity={1} 

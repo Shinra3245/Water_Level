@@ -2,9 +2,11 @@
   "rules": {
     "tinaco": {
       "lectura": {
-
-        ".read": true,
-        ".write": "auth != null"
+        ".read": "auth != null",
+        ".write": "auth != null && newData.hasChildren(['d', 'n', 'p', 'a', 't', 's'])",
+        "p": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+        }
       }
     }
   }
